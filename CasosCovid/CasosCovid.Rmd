@@ -1,0 +1,327 @@
+---
+title: "CasosCovid"
+author: "Humberto Genaro Cisneros Salinas"
+date: '`r Sys.Date()`'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(ggplot2)
+library(dplyr)
+library(gridExtra)
+```
+
+Primero se importan los documentos CSV necesarios para analizar la pandemia del COVID-19 en México. Se utiliza un data frame con información principal sobre cada región de México para poder hacer mapas, datos de casos confirmados y defunciones por estado del CONACYT y cierre de datos del 2020,2021,2022 y 2023 de la Dirección General de Epidemiología.
+
+```{r}
+df_mex <- read.csv("df_mex.csv")
+covid_estados <- read.csv("covidEstados1.csv")
+muertes_estados <- read.csv("muertesEstados.csv")
+covid2020_df<-read.csv("COVID2020.csv")
+covid2021_df<-read.csv("COVID2021.csv")
+covid2022_df<-read.csv("COVID2022.csv")
+covid2023_df<-read.csv("COVID2023.csv")
+```
+
+## Mapas de Casos y Defunciones por COVID-19 en México
+
+Para poder hacer un mapa con el número de casos por estado primero se debe obtener una suma de casos totales en cada estado. Se utiliza un ciclo y se asigna un id a cada estado. Se hace una nueva matriz en donde se agrega en una columna la id del estado y en otra el número de casos totales según el CONACYT. Finalmente se ordenan los estados según su id para poder ser agregados al data frame de México.
+
+```{r}
+casos_estados<-matrix(0, nrow = 32, ncol = 2)
+for(i in 1:32){
+  casos_estados[i,1]<-covid_estados[i,1]
+  casos_estados[i,2]<-sum(covid_estados[i,4:ncol(covid_estados)])
+}
+colnames(casos_estados)<-c('id','casos')
+casos_estados<-casos_estados[order(casos_estados[,1]),]
+
+```
+
+Se le agrega un vector vacío al data frame de México para después agregar el conteo de casos por estado, no se agregó de forma directa el vector de casos por estado ya que en el data frame cada fila es una región, no un estado.
+
+```{r}
+casos_covid <- rep(0, 65182)
+df_mex<-cbind(df_mex,casos_covid)
+```
+
+Se cicla entre las filas del data frame y se le agrega a cada fila el número de casos según el estado al que pertenece la región de la fila.
+
+```{r}
+for(i in 1:65182){
+  df_mex[i,15]<-casos_estados[df_mex[i,1],2]
+}
+```
+
+Se hace un mapa y se guarda en una variable para después poder comprarlo con el mapa de defunciones por estado. Este mapa toma en cuenta la latitud y longitud de las regiones del data frame para crear el mapa y luego la información de casos por estado para rellenar el estado según los casos.
+
+```{r}
+mapa_casos<-ggplot(df_mex, aes(long, lat, group = group, fill = casos_covid)) +
+  geom_polygon(color = "grey50") +
+  coord_quickmap() +
+  labs(title = "Mapa de México con Número de Casos por Estado") +
+  scale_fill_viridis_c(option = "magma")+
+  theme_minimal()
+
+mapa_casos
+```
+
+Se hace el mismo procedimiento que se hizo con los casos para las defunciones
+
+```{r}
+muertesEstados<-matrix(0, nrow = 32, ncol = 2)
+for(i in 1:32){
+  muertesEstados[i,1]<-muertes_estados[i,1]
+  muertesEstados[i,2]<-sum(muertes_estados[i,4:ncol(muertes_estados)])
+}
+colnames(muertesEstados)<-c('id','muertes')
+muertesEstados<-muertesEstados[order(muertesEstados[,1]),]
+
+```
+
+```{r}
+muertes_covid <- rep(0, 65182)
+df_mex<-cbind(df_mex,muertes_covid)
+```
+
+```{r}
+for(i in 1:65182){
+  df_mex[i,16]<-muertesEstados[df_mex[i,1],2]
+}
+```
+
+```{r}
+mapa_defs<-ggplot(df_mex, aes(long, lat, group = group, fill = muertes_covid)) +
+  geom_polygon(color = "grey50") +
+  coord_quickmap() +
+  labs(title = "Mapa de México con Número de Defunciones por Estado") +
+  scale_fill_viridis_c(option = "magma")+
+  theme_minimal()
+
+mapa_defs
+```
+
+Finalmente, se acomodan ambos mapas en dos filas para poder comparar los estados con mayor número de casos y los que tuvieron mayor número de defunciones.
+
+```{r}
+grid.arrange(mapa_casos, mapa_defs, nrow = 2)
+```
+
+Se puede observar como las mayores diferencias entre número de casos y número de defunciones son Veracruz, Puebla y Jalisco. Estos tres estados no resaltan en el mapa de casos por COVID-19 ya que tienen un color azul oscuro pero sí tienen una diferencia significativa en el mapa de defunciones ya que tienen un color morado. Esto se puede deber a muchos factores como si los estados tenían centros médicos con atención suficientemente buena como para tratar a los casos de gravedad mortal o al hecho de que la población en estos estados cuenta con características como enfermedades o condiciones que los hacen tener un mayor riesgo de defunción al contraer COVID-19.
+
+## Población por estado
+
+Primero se hace un mapa utilizando el data frame de México para poder visualizar con un heatmap la población de cada estado y su comparación con los demás estados debido al cambio de color.
+
+```{r}
+ggplot(df_mex, aes(long, lat, group = group, fill = pop)) +
+  geom_polygon(color = "grey50") +
+  coord_quickmap() +
+  labs(title = "Mapa de México con Habitantes por Estado") +
+  scale_fill_viridis_c(option = "magma")+
+  theme_minimal()
+```
+
+En este mapa se puede notar que los estados con mayor número de personas son el Estado de México de color amarillo y Veracruz, Puebla, Ciudad de México y Jalisco de un color más rosado.
+
+Después se hace un gráfico de barras en donde se puedan visualizar de otra forma los habitantes en cada estado.
+
+```{r}
+ggplot(df_mex,aes(y=state_name,x=pop))+
+  geom_bar(stat="identity")+
+  labs(x = "Estado", y = "Población")+
+  theme(axis.text.x = element_text(size = 6))
+```
+
+Con este gráfico de barras se puede notar como los datos interpretados del mapa son correctos ya que es notable la gran cantidad de personas que habitan en el Estado de México y los que le siguen con menos de la mitad de población son Veracruz, Jalisco y Puebla. Se puede notar que aunque la ciudad de México tenga menos habitantes que el Estado de México, esta tuvo más casos de covid. De igual manera, los estados que resaltan en población, son aquellos con un mayor número de defunciones. Se podría interpretar que la población de un estado de la república está más relacionada con el número de defunciones por COVID-19 que el número total de casos en dicho estado.
+
+## Línea del Tiempo de Casos y Defunciones
+
+```{r}
+casos_nacional<-covid_estados[33,][1,4:ncol(covid_estados)]
+muertes_nacional<-muertes_estados[33,][1,4:ncol(muertes_estados)]
+```
+
+Primero se hace una matriz con los datos de casos y defunciones por COVID-19 a nivel nacional. Para esto se itera en las dimensiones de la matriz de 1215x3 y se llenan los datos para cada fecha registrada. Ya que las muertes se empezaron a registrar después que los casos, se llenan estos espacios vacíos con 0.
+
+```{r}
+nacional<-matrix(0, nrow = 1215, ncol = 3)
+nacional[,1]<-colnames(casos_nacional)
+for (i in 1:1215){
+  nacional[i,2]<-casos_nacional[1,i]
+  if(i>=21 && i<1215){
+    nacional[i,3]<-muertes_nacional[1,i-20]
+  } else{
+    nacional[i,3]<-0
+  }
+}
+colnames(nacional)<-c('fecha','casos','muertes')
+```
+
+Se crea un data frame con la información del la matriz de casos y defunciones a nivel nacional y se convierte el apartado de fecha a un objeto de tipo Date.
+
+```{r}
+nacional_df <- data.frame(
+  fecha = as.Date(substring(nacional[, 1], 2), format = "%d.%m.%Y"),
+  casos = as.numeric(nacional[, 2]),
+  muertes = as.numeric(nacional[, 3])
+)
+```
+
+```{r}
+write.csv(df_mex, "covid_df.csv", row.names=TRUE)
+```
+
+Se hace la línea de tiempo en donde se grafica el número de casos por día que se tienen registrados por el CONACYT.
+
+```{r}
+ggplot(nacional_df, aes(fecha, casos)) + 
+  geom_line(colour= "darkblue") +
+  labs(title = "Línea del Tiempo de Casos Diarios de COVID-19 en México")
+```
+
+Por último, se hace la línea del tiempo de las defunciones en México registradas en el CONACYT.
+
+```{r}
+ggplot(nacional_df, aes(fecha, muertes)) + 
+  geom_line(colour= "darkred") +
+  labs(title = "Línea del Tiempo de Defunciones Diarias por COVID-19 en México")
+```
+
+Los primeros registros de las variantes más importantes en México, Delta y Omicron, se dieron alrededor del 21 de junio de 2021 (Camhaji,2021) y 12 de mayo de 2023 (Web, C., 2023) respectivamente. Estas fechas se pueden graficar como líneas verticales en ambas gráficas para poder ver si tuvieron algún efecto en los casos o defunciones.
+
+```{r}
+ggplot(nacional_df, aes(fecha, casos)) + 
+  geom_line(colour= "darkblue") +
+  labs(title = "Línea del Tiempo de Casos Diarios de COVID-19 en México")+
+  geom_vline(xintercept=as.Date("2021-06-21"))+
+  geom_vline(xintercept=as.Date("2023-05-23"))
+
+ggplot(nacional_df, aes(fecha, muertes)) + 
+  geom_line(colour= "darkred") +
+  labs(title = "Línea del Tiempo de Defunciones Diarias por COVID-19 en México")+
+  geom_vline(xintercept=as.Date("2021-06-21"))+
+  geom_vline(xintercept=as.Date("2023-05-23"))
+```
+
+La variante Omicrón es muy reciente para los datos proporcionados por el CONACYT y por ende no demuestra ningún efecto en ninguna de estas líneas de tiempo. Por otro lado, la variante Delta está presente junto antes de un resurgimiento en casos y en defunciones. Esto hace sentido ya que la variante Delta de COVID-19 es altamente transmisible (Ifranco, 2021).
+
+## Edades con COVID
+
+Se puede realizar un boxplot con las edades de los pacientes de COVID-19 registrados por la Dirección General de Epidemiología en México al utilizar el campo de edad de los data frames de cada corte y generar un box plot por cada año.
+
+```{r}
+ggplot() +
+  geom_boxplot(data = covid2020_df, aes(x = "2020", y = EDAD)) +
+  geom_boxplot(data = covid2021_df, aes(x = "2021", y = EDAD)) +
+  geom_boxplot(data = covid2022_df, aes(x = "2022", y = EDAD)) +
+  geom_boxplot(data = covid2023_df, aes(x = "2023", y = EDAD)) +
+  labs(title="Boxplot de Edades de Casos por Año", y="Edad", x="Año")
+```
+
+Esto nos da como resultado que el promedio y distribución de edad se mantiene muy parecido a lo largo de los años en donde el promedio se encuentra por debajo de los 50 años. Los años en donde se puede percibir notablemente que el tercer cuartil sobrepasa los 50 años son en 2020 y en 2023. También, en 2021 el promedio de edad baja en comparación al año anterior. Esto probablemente se deba a que las personas mayores, al ser la demográfica con mayor riesgo de verse afectados gravemente por el virus, tuvieron un mejor cuidado de no contagiarse. En cambio, la población joven no tuvo tanto cuidado y por eso la edad promedio de pacientes bajó. Es importante mencionar que la mayoría de los datos que se representan como círculos por encima de los bloxpots se tratan de valores atípicos y probablemente errores de registro. Un ejemplo de esto es que tanto en 2021 como en 2022 se registraron pacientes de 266 años de edad. Aún así, la cantidad de estos datos atípicos es mínima como se puede observar en el siguiente diagrama de violín.
+
+```{r}
+ggplot() +
+  geom_violin(data = covid2020_df, aes(x = "2020", y = EDAD)) +
+  geom_violin(data = covid2021_df, aes(x = "2021", y = EDAD)) +
+  geom_violin(data = covid2022_df, aes(x = "2022", y = EDAD)) +
+  geom_violin(data = covid2023_df, aes(x = "2023", y = EDAD)) +
+  labs(title="Diagrama de Violín de Edades de Casos por Año", y="Edad", x="Año")
+```
+
+## Defunsiones con Factores de Riesgo
+
+Se genera una función para obtener el conteo de factores de riesgo que estuvieron presentes en cada defunción registrada. La defunción de un paciente está indicada cuando la fecha de defunción no equivale a "9999-99-99". Después se suman los casos de defunciones de cada columna que represente un factor de riesgo y finalmente se agrega a un data frame.
+
+```{r}
+defuncion<-function(df){
+
+  defunciones_df <- filter(df, FECHA_DEF != "9999-99-99")
+  
+  diabetes <- sum(defunciones_df$DIABETES == 1)
+  epoc<-sum(defunciones_df$EPOC == 1)
+  asma<-sum(defunciones_df$ASMA == 1)
+  inmunosuprimidos <- sum(defunciones_df$INMUSUPR == 1)
+  hipertension <- sum(defunciones_df$HIPERTENSION == 1)
+  obesidad <- sum(defunciones_df$OBESIDAD == 1)
+  renal_cronica <- sum(defunciones_df$RENAL_CRONICA == 1)
+  tabaquismo <- sum(defunciones_df$TABAQUISMO == 1)
+  enfermedad <- sum(defunciones_df$OTRA_COM == 1)
+  cardiovascular <- sum(defunciones_df$CARDIOVASCULAR == 1)
+  
+  muertes_riesgo<-data.frame(
+    diabetes=diabetes,
+    epoc=epoc,
+    asma=asma,
+    inmunosuprimidos=inmunosuprimidos,
+    hipertension=hipertension,
+    obesidad=obesidad,
+    renal_cronica,
+    tabaquismo=tabaquismo,
+    enfermedad=enfermedad,
+    cardiovascular=cardiovascular
+  )
+}
+
+```
+
+Se crean 4 data frames, uno para cada cierre de datos del 2020 al 2023.
+
+```{r}
+def2020<-defuncion(covid2020_df)
+def2021<-defuncion(covid2021_df)
+def2022<-defuncion(covid2022_df)
+def2023<-defuncion(covid2023_df)
+```
+
+Finalmente, se suman las defunciones de cada cierre de datos en un solo dataframe general para poder representar la cantidad de defunciones asociadas a cada factor de riesgo. Al final se tiene que hacer una transposición del data frame para que cada factor de riesgo sea una fila y el número de defunciones sea representado en la columna adyacente.
+
+```{r}
+  defs <- data.frame(
+  diabetes = def2020$diabetes + def2021$diabetes + def2022$diabetes + def2023$diabetes,
+  epoc = def2020$epoc + def2021$epoc + def2022$epoc + def2023$epoc,
+  asma = def2020$asma + def2021$asma + def2022$asma + def2023$asma,
+  inmunosuprimidos = def2020$inmunosuprimidos + def2021$inmunosuprimidos + def2022$inmunosuprimidos + def2023$inmunosuprimidos,
+  hipertension = def2020$hipertension + def2021$hipertension + def2022$hipertension + def2023$hipertension,
+  obesidad = def2020$obesidad + def2021$obesidad + def2022$obesidad + def2023$obesidad,
+  renal_cronica = def2020$renal_cronica + def2021$renal_cronica + def2022$renal_cronica + def2023$renal_cronica,
+  tabaquismo = def2020$tabaquismo + def2021$tabaquismo + def2022$tabaquismo + def2023$tabaquismo,
+  enfermedad = def2020$enfermedad + def2021$enfermedad + def2022$enfermedad + def2023$enfermedad,
+  cardiovascular = def2020$cardiovascular + def2021$cardiovascular + def2022$cardiovascular + def2023$cardiovascular
+)
+
+def_totales<-matrix(0,nrow=10,ncol=2)
+for (i in 1:ncol(defs)){
+  def_totales[i,1]<-colnames(defs)[i]
+  def_totales[i,2]=as.numeric(defs[1,i])
+}
+colnames(def_totales)<-c("factor_de_riesgo","defunciones")
+```
+
+Se crea un gráfico de barras para cada factor de riesgo y sus respectivas defunciones asociadas. Como el número de defunciones es un tipo de dato string, se tiene que convertir a numérico para que ggplot lo pueda graficar en órden ascendente en el eje vertical.
+
+```{r}
+ggplot(def_totales,aes(factor_de_riesgo,as.numeric(defunciones)))+
+  geom_bar(stat="identity")+
+  labs(x = "Factor de Riesgo", y = "Defunciones")+
+  theme(axis.text.x = element_text(size = 6))
+```
+
+Con este gráfico de barras se puede observar que la hipertensión y la diabetes son los factores de riesgo con más defunciones asociadas, con esto se puede concluir que las personas que sufren de este tipo de condiciones deben ser consideradas como la demográfica con mayor riesgo mortal en caso de contraer COVID-19. Algunas factores asociados con el sistema respiratorio como el asma y el tabaquismo no cuentan con tantas defunciones asociadas como los mencionados anteriormente, aún y cuando el COVID-19 afecta directamente el sistema respiratorio, por lo que se esperaría que los pacientes con estas condiciones tuviesen más complicaciones. Como en estadísticas pasadas, se puede inferir que esto se debe a que este tipo de pacientes son los que más precaución guardaron o son el tipo de pacientes que un centro médico tiene mayor prioridad de tratar.
+
+## Conclusión
+
+A lo largo de esta investigación en las bases de datos se encontró que existen varias maneras de representar los datos como los casos por día en cada columna o una fila para los detalles específicos de cada caso, es importante saber lo que se necesita para poder determinar cuál es la base de datos correcta para implementar en una investigación. También, que no siempre los resultados esperados por inferencia como que el asma tuviera el mayor número de defunciones asociadas con el COVID-19 o que los estados con más casos serían también aquellos con más defunciones por este virus. El análisis de datos ayuda a dejar clara una tendencia para después poder ser analizada y explicada por otras ramas de la ciencia. En este caso sería la biología.
+
+## Referencias:
+
+Camhaji, E. (2021, 22 junio). Delta, la última variante del coronavirus que inquieta a México: “No hay que relajarse ni apanicarse”. El País México. <https://elpais.com/mexico/2021-06-22/delta-la-ultima-variante-del-coronavirus-que-inquieta-a-mexico-no-hay-que-relajarse-ni-apanicarse.html>
+
+Ifranco. (2021, 11 julio). Características de la variante Delta del coronavirus. Clínica FEHV. <https://fehv.org/caracteristicas-variante-delta-coronavirus/#>
+
+Web, C. 2. (2021, 3 diciembre). Confirman primer caso de variante Ómicron en México; se encuentra hospitalizado. NOTICIAS \| Capital 21. <https://www.capital21.cdmx.gob.mx/noticias/?p=29514#>

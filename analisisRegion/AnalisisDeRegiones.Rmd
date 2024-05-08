@@ -1,0 +1,527 @@
+---
+title: "Análisis De Regiones"
+author: "Humberto Genaro Cisneros Salinas"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+```{r}
+#Leer Base de Datos=
+M2 = read.csv("datosEq4.csv") 
+
+# Creando las bases de datos R1, R2
+R1 = subset(M2, M2$region == "AmericaCN")
+R2 = subset(M2, M2$region == "AfricaN") 
+```
+
+```{r}
+#Variable Respuesta: Emisiones de CO2
+options(scipen = 9)
+
+y1 = R1$emisiones_CO2
+x1 = R1$electrd_fosiles
+y2 = R2$emisiones_CO2
+x2 = R2$electrd_fosiles
+regresion1 = lm(y1~x1)
+regresion2 = lm(y2~x2) 
+
+library(pander)
+
+pander(summary(regresion1))
+pander(summary(regresion2))
+```
+
+```{r}
+#Diagrama de Dispersión
+par(mfrow = c(1, 2))
+plot(x1,y1, pch = 20, col = "red", main = "CO2 = f(fosiles)", xlab = "fosiles", ylab = "CO2")
+abline(regresion1, lty = 3, col = "blue")
+plot(x2,y2, pch = 20, col = "red", main = "CO2 = f(fosiles)", xlab = "fosiles", ylab = "CO2")
+abline(regresion2, lty = 3, col = "blue")
+```
+
+```{r}
+#Grafica de Residuos
+par(mfrow = c(1, 2))
+plot(regresion1$fitted.values, regresion1$residuals, pch= 20, col = "red", xlab = "y estimadas por el modelo", ylab = "residuales", main = "gráfico de residuales de CO2 = f(fosiles)")
+
+abline(h = 0, lty = 5, col = "blue")
+
+plot(regresion2$fitted.values, regresion2$residuals, pch= 20, col = "red", xlab = "y estimadas por el modelo", ylab = "residuales", main = "gráfico de residuales de CO2 = f(fosiles)")
+
+abline(h = 0, lty = 5, col = "blue")
+```
+
+```{r}
+# Argumentos de normalidad sobre los residuales
+par(mfrow = c(1, 2))  
+
+# R1
+re1 = regresion1$residuals
+hist(re1, probability = TRUE, col = rainbow(10), main = "Residuos - América Centro y Norte")
+lines(density(re1), col = "red")
+xinf1 = qnorm(0.001, mean(re1), sd(re1))
+xsup1 = qnorm(0.999, mean(re1), sd(re1))
+xn1 = seq(xinf1, xsup1, 0.1)
+yn1 = dnorm(xn1, mean(re1), sd(re1))
+lines(xn1, yn1, lty = 5, col = "blue")
+
+# R2
+re2 = regresion2$residuals
+hist(re2, probability = TRUE, col = rainbow(10), main = "Residuos - África del Norte")
+lines(density(re2), col = "red")
+xinf2 = qnorm(0.001, mean(re2), sd(re2))
+xsup2 = qnorm(0.999, mean(re2), sd(re2))
+xn2 = seq(xinf2, xsup2, 0.1)
+yn2 = dnorm(xn2, mean(re2), sd(re2))
+lines(xn2, yn2, lty = 5, col = "blue")
+```
+
+```{r}
+M = read.csv("G102-datos04.csv") 
+#Leer el Documento
+
+str(M)
+
+table(M$entidad) 
+#Hacer Tabla
+
+
+names (M)
+
+summary(M) 
+#Resumir información importante
+
+
+R1 = c("Benin", "Sao Tome and Principe", "Sierra Leone")
+#África del Norte
+region = ifelse(M$entidad %in% R1, "AfricaN", "AmericaCN")
+#América Centro y Norte
+M1 = cbind(M, region)
+
+
+library(dplyr)
+
+M1 = select(
+  M1,
+  "entidad",
+  "region",
+  "electrd_fosiles",
+  "electrd_de_energ_renov",
+  "emisiones_CO2",
+  "crecimiento_PIB",
+  "densidad_pobl_Km2"
+)
+# De M1 selecciona las variables indicadas
+str(M1)
+
+M1 = M1[-1]
+#Quita la variable entidad (primera variable)
+M1 = na.omit(M1)
+#Quita los datos perdidos
+str(M1)
+
+
+write.csv(M1, "datosEq4.csv", row.names = FALSE)
+# cambia # por el número de tu equipo.
+# row.names=FALSE lo que hace es evitar que se añada una columna de conteo de filas.
+# la nueva base de datos datosEq#.csv se guardará en el directorio de trabajo de R Studio (donde guardaste el documento de trabajo)
+
+R1 = subset(M1, M1$region == "AfricaN")[-1]
+#Variable de Región 1
+
+R2 = subset(M1, M1$region == "AmericaCN")[-1]
+#Variable de Región 2
+
+
+cat("Región 1", "\n")
+
+summary(R1)
+# Calcula las principales medidas por variable para la Región 1
+write.csv(summary(R1), "SummaryR1.csv", row.names = FALSE)
+
+write.csv(summary(R2), "SummaryR2.csv", row.names = FALSE)
+
+cat("\n", "Desviación estándar 1", "\n")
+
+apply(R1, 2, sd)
+# Calcula la desviación estándar de las variables de la Región 1
+cat("\n", "Rango Medio 1", "\n")
+
+Rm = function(x)
+  ((max(x) + min(x)) / 2)
+
+apply(R1, 2, Rm)
+#Calcula el rango medio para las variables de la Región 1
+cat("Región 2", "\n")
+
+summary(R2)
+
+write.csv(summary(R2), "SummaryR2.csv", row.names = FALSE)
+
+cat("\n", "Desviación estándar 2", "\n")
+
+apply(R2, 2, sd)
+# Calcula la desviación estándar de las variables de la Región 1
+cat("\n", "Rango Medio 2", "\n")
+
+Rm = function(x)
+  ((max(x) + min(x)) / 2)
+
+apply(R2, 2, Rm)
+#Calcula el rango medio para las variables de la Región 1
+
+cat("\n", "Histogramas", "\n")
+par(mfrow = c(3, 2))
+
+hist(
+  R1$electrd_fosiles,
+  col = 3,
+  main = "Región África Norte",
+  xlab = "Electricidad de origen fósil(kWh)",
+  ylab = "Frecuencia"
+)
+
+hist(
+  R2$electrd_fosiles,
+  col = 4,
+  main = "Región América Centro y Norte",
+  xlab = "Electricidad de origen fósil(kWh)",
+  ylab = ""
+)
+
+
+hist(
+  R1$electrd_de_energ_renov,
+  col = 3,
+  main = "Región África Norte",
+  xlab = "Electricidad de origen renovable(kWh)",
+  ylab = "Frecuencia"
+)
+
+hist(
+  R2$electrd_de_energ_renov,
+  col = 4,
+  main = "Región América Centro y Norte",
+  xlab = "Electricidad de origen renovable(kWh)",
+  ylab = ""
+)
+
+
+hist(
+  R1$emisiones_CO2,
+  col = 3,
+  main = "Región África Norte",
+  xlab = "Emisiones de CO2 (mtu)",
+  ylab = "Frecuencia"
+)
+
+hist(
+  R2$emisiones_CO2,
+  col = 4,
+  main = "Región América Centro y Norte",
+  xlab = "Emisiones de CO2 (mtu)",
+  ylab = ""
+)
+
+
+hist(
+  R1$densidad_pobl_Km2,
+  col = 3,
+  main = "Región África Norte",
+  xlab = "Densidad de Población en Personas por Kilómetro Cuadrado",
+  ylab = "Frecuencia"
+)
+
+hist(
+  R2$densidad_pobl_Km2,
+  col = 4,
+  main = "Región América Centro y Norte",
+  xlab = "Densidad de Población en Personas por Kilómetro Cuadrado",
+  ylab = ""
+)
+
+
+hist(
+  R1$crecimiento_PIB,
+  col = 3,
+  main = "Región África Norte",
+  xlab = "Crecimiento anual del PIB",
+  ylab = "Frecuencia"
+)
+
+hist(
+  R2$crecimiento_PIB,
+  col = 4,
+  main = "Región América Centro y Norte",
+  xlab = "Crecimiento anual del PIB",
+  ylab = ""
+)
+
+cat("\n", "Gráficos de Caja", "\n")
+
+par(mfrow = c(3, 2))
+boxplot(
+  electrd_fosiles ~ region,
+  data = M,
+  col = 3:4,
+  ylab="Electricidad de origen fósil(kWh)",
+  xlab="Región",
+  main = "Electricidad de origen fósil"
+)
+
+
+boxplot(
+  electrd_de_energ_renov ~ region,
+  data = M,
+  col = 3:4,
+  ylab="Electricidad de origen renovable(kWh)",
+  xlab="Región",
+  main = "Electricidad de origen renovable"
+)
+
+
+boxplot(
+  emisiones_CO2 ~ region,
+  data = M,
+  col = 3:4,
+  ylab="Emisiones de CO2 (mtu)",
+  xlab="Región",
+  main = "Emisiones de CO2"
+  
+)
+
+boxplot(
+  densidad_pobl_Km2 ~ region,
+  data = M,
+  col = 3:4,
+  ylab="Densidad de Población por km^2",
+  xlab="Región",
+  main = "Densidad de Población"
+  
+)
+
+boxplot(
+  crecimiento_PIB ~ region,
+  data = M,
+  col = 3:4,
+  ylab="Crecimiento anual del PIB",
+  xlab="Región",
+  main = "Crecimiento anual del PIB"
+
+)
+
+
+correl1 = cor(R1)
+
+round(correl1, 3)
+
+write.csv(round(correl1, 3), "correlR1.csv", row.names = FALSE)
+
+correl2 = cor(R2)
+
+round(correl2, 3)
+
+write.csv(round(correl2, 3), "correlR2.csv", row.names = FALSE)
+
+
+plot(R1, col = "blue")
+# Todos los gráficos de dispersión de la Región 1
+
+
+plot(R2, col = "blue")
+# Todos los gráficos de dispersión de la Región 2
+
+```
+
+#1. Los Datos
+
+```{r}
+M = read.csv("datosEq4.csv")  # El símbolo# debe ser el número de tu equipo
+
+R1 = subset(M, M$region=="AfricaN")[-1]
+R2 = subset(M, M$region=="AmericaCN")[-1]
+```
+
+#2. Distribución de densidad empírica de las variables por región y su distribución normal teórica **Región 1**
+
+```{r}
+par(mfrow = c(3, 2))
+
+x1_1 = R1$electrd_fosiles
+m1_1 = mean(x1_1)
+ds1_1 = sd(x1_1)
+hist(x1_1, freq=FALSE, col="pink3", main="América Centro y Norte", xlab="Electricidad de origen fósil(kWh)", ylab="Frecuencia")
+lines(density(x1_1), col="pink4", lwd=2)
+x = seq(m1_1-4*ds1_1, m1_1+4*ds1_1, 0.1)
+curve(dnorm(x, m1_1, ds1_1), add=TRUE, col="red", lwd=2)
+
+x1_2 = R1$electrd_de_energ_renov
+m1_2 = mean(x1_2)
+ds1_2 = sd(x1_2)
+hist(x1_2, freq=FALSE, col="pink3", main="América Centro y Norte", xlab="Electricidad de origen renovable(kWh)", ylab="Frecuencia")
+lines(density(x1_2), col="pink4", lwd=2)
+x = seq(m1_2-4*ds1_2, m1_2+4*ds1_2, 0.1)
+curve(dnorm(x, m1_2, ds1_2), add=TRUE, col="red", lwd=2)
+
+x1_3 = R1$emisiones_CO2
+m1_3 = mean(x1_3)
+ds1_3 = sd(x1_3)
+hist(x1_3, freq=FALSE, col="pink3", main="América Centro y Norte", xlab="Emisiones de CO2 (mtu)", ylab="Frecuencia")
+lines(density(x1_3), col="pink4", lwd=2)
+x = seq(m1_3-4*ds1_3, m1_3+4*ds1_3, 0.1)
+curve(dnorm(x, m1_3, ds1_3), add=TRUE, col="red", lwd=2)
+
+x1_4 = R1$crecimiento_PIB
+m1_4 = mean(x1_4)
+ds1_4 = sd(x1_4)
+hist(x1_4, freq=FALSE, col="pink3", main="América Centro y Norte", xlab="Crecimiento del PIB", ylab="Frecuencia")
+lines(density(x1_4), col="pink4", lwd=2)
+x = seq(m1_4-4*ds1_4, m1_4+4*ds1_4, 0.1)
+curve(dnorm(x, m1_4, ds1_4), add=TRUE, col="red", lwd=2)
+
+x1_5 = R1$densidad_pobl_Km2
+m1_5 = mean(x1_5)
+ds1_5 = sd(x1_5)
+hist(x1_5, freq=FALSE, col="pink3", main="América Centro y Norte", xlab="Densidad de Población por Kilómetro Cuadrado", ylab="Frecuencia")
+lines(density(x1_5), col="pink4", lwd=2)
+x = seq(m1_5-4*ds1_5, m1_5+4*ds1_5, 0.1)
+curve(dnorm(x, m1_5, ds1_5), add=TRUE, col="red", lwd=2)
+```
+
+**Región 2**
+
+```{r}
+par(mfrow = c(3, 2))
+x2_1 = R2$electrd_fosiles
+m2_1 = mean(x2_1)
+ds2_1 = sd(x2_1)
+hist(x2_1, freq=FALSE, col="pink3", main="África Norte", xlab="Electricidad de origen fósil(kWh)", ylab="Frecuencia")
+lines(density(x2_1), col="pink4", lwd=2)
+x = seq(m2_1-4*ds2_1, m2_1+4*ds2_1, 0.1)
+curve(dnorm(x, m2_1, ds2_1), add=TRUE, col="red", lwd=2)
+
+x2_2 = R2$electrd_de_energ_renov
+m2_2 = mean(x2_2)
+ds2_2 = sd(x2_2)
+hist(x2_2, freq=FALSE, col="pink3", main="África Norte", xlab="Electricidad de origen renovable(kWh)", ylab="Frecuencia")
+lines(density(x2_2), col="pink4", lwd=2)
+x = seq(m2_2-4*ds2_2, m2_2+4*ds2_2, 0.1)
+curve(dnorm(x, m2_2, ds2_2), add=TRUE, col="red", lwd=2)
+
+x2_3 = R2$emisiones_CO2
+m2_3 = mean(x2_3)
+ds2_3 = sd(x2_3)
+hist(x2_3, freq=FALSE, col="pink3", main="África Norte", xlab="Emisiones de CO2 (mtu)", ylab="Frecuencia")
+lines(density(x2_3), col="pink4", lwd=2)
+x = seq(m2_3-4*ds2_3, m2_3+4*ds2_3, 0.1)
+curve(dnorm(x, m2_3, ds2_3), add=TRUE, col="red", lwd=2)
+
+x2_4 = R2$crecimiento_PIB
+m2_4= mean(x2_4)
+ds2_4 = sd(x2_4)
+hist(x2_4, freq=FALSE, col="pink3", main="África Norte", xlab="Crecimiento del PIB", ylab="Frecuencia")
+lines(density(x2_4), col="pink4", lwd=2)
+x = seq(m2_4-4*ds2_4, m2_4+4*ds2_4, 0.1)
+curve(dnorm(x, m2_4, ds2_4), add=TRUE, col="red", lwd=2)
+
+x2_5 = R2$densidad_pobl_Km2
+m2_5  = mean(x2_5)
+ds2_5  = sd(x2_5)
+hist(x2_5, freq=FALSE, col="pink3", main="África Norte", xlab="Densidad de Población por Kilómetro Cuadrado", ylab="Frecuencia")
+lines(density(x2_5), col="pink4", lwd=2)
+x = seq(m2_5-4*ds2_5, m2_5+4*ds2_5, 0.1)
+curve(dnorm(x, m2_5, ds2_5), add=TRUE, col="red", lwd=2)
+
+```
+
+**Preguntas** **¿En qué se distingue la función de densidad del histograma realizado en la Etapa 1? Argumenta por qué.** **De acuerdo con la comparación entre la función de densidad empírica y la función teórica, ¿crees que los datos se comporten como una normal? Argumenta por qué sí o por qué no.**
+
+#3. Análisis de centralización y forma
+
+```{r}
+media_R1 = apply(R1, 2, mean)
+mediana_R1 = apply(R1, 2, median) 
+Rm = function(x)((max(x)+min(x))/2)
+Rm_R1 = apply(R1, 2, Rm)
+
+media_R2 = apply(R2, 2, mean)
+mediana_R2 = apply(R2, 2, median)
+Rm_R2 = apply(R2, 2, Rm)
+
+Centro_R1 = data.frame(media_R1, mediana_R1, Rm_R1)
+Centro_R2 = data.frame(media_R2, mediana_R2, Rm_R2)
+```
+
+**Preguntas** **¿Qué puedes decir sobre la simetría de las variables?**
+
+#4. QQ plot de las variables
+
+```{r}
+par(mfrow = c(3, 2))
+qqnorm(x1_1, col="blue", pch=20, sub="Electricidad de origen fósil(kWh)-R1")
+qqline(x1_1, col="red")
+
+qqnorm(x1_2, col="blue", pch=20, sub="Electricidad de origen renovable(kWh)-R1")
+qqline(x1_2, col="red")
+
+qqnorm(x1_3, col="blue", pch=20, sub="Emisiones de CO2 (mtu)-R1")
+qqline(x1_3, col="red")
+
+qqnorm(x1_4, col="blue", pch=20, sub="Crecimiento del PIB-R1")
+qqline(x1_4, col="red")
+
+qqnorm(x1_5, col="blue", pch=20, sub="Densidad de Población por Kilómetro Cuadrado-R1")
+qqline(x1_5, col="red")
+
+par(mfrow = c(3, 2))
+qqnorm(x2_1, col="blue", pch=20, sub="Electricidad de origen fósil(kWh)-R2")
+qqline(x2_1, col="red")
+
+qqnorm(x2_2, col="blue", pch=20, sub="Electricidad de origen renovable(kWh)-R2")
+qqline(x2_2, col="red")
+
+qqnorm(x2_3, col="blue", pch=20, sub="Emisiones de CO2 (mtu)-R2")
+qqline(x2_3, col="red")
+
+qqnorm(x2_4, col="blue", pch=20, sub="Crecimiento del PIB-R2")
+qqline(x2_4, col="red")
+
+qqnorm(x2_5, col="blue", pch=20, sub="Densidad de Población por Kilómetro Cuadrado-R2")
+qqline(x2_5, col="red")
+
+```
+
+```{r}
+#qqplot
+par(mfrow = c(1, 2))
+#R1
+re1 = regresion1$residuals
+qqnorm(re1, main = "Q-Q Plot - América Centro y Norte")
+qqline(re1)
+
+#R2
+re2 = regresion2$residuals
+qqnorm(re2, main = "Q-Q Plot - África del Norte")
+qqline(re2)
+```
+
+```{r}
+#Pruebas
+#Shapiro
+re1 = regresion1$residuals
+shapiro.test(re1)
+
+re2 = regresion2$residuals
+shapiro.test(re2)
+
+#Brauch
+library(lmtest)
+
+bptest(y1 ~ x1)
+bptest(y2 ~ x2)
+```

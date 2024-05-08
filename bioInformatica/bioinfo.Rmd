@@ -1,0 +1,331 @@
+---
+title: "Base de datos de virus de NCBI"
+author: "Humberto Genaro Cisneros Salinas"
+date: "`r Sys.Date()`"
+output:
+  html_document: default
+---
+
+```{r setup, include=FALSE, warning=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Base de datos de virus de NCBI
+
+```{r}
+library(rentrez)
+library(seqinr)
+library(Biostrings)
+library(ggplot2)
+library(stringr)
+```
+
+## Entidades a Buscar
+
+Zika virus, complete genome SARS coronavirus, complete genome
+
+Wuhan seafood market pneumonia virus isolate Wuhan-Hu-1, complete genome
+
+Middle East respiratory syndrome coronavirus, complete genome
+
+Dengue virus 1, complete genome
+
+Además, busca las secuencias de H1N1 que apareció en México en 2009 y obtén todos los segmentos del virus.
+
+```{r}
+zika<-readDNAStringSet("zika.fasta")[[1]]
+sars<-readDNAStringSet("sars.fasta")[[1]]
+wuhan<-readDNAStringSet("wuhan.fasta")[[1]]
+middle_east<-readDNAStringSet("middleEast.fasta")[[1]]
+dengue<-readDNAStringSet("dengue.fasta")[[1]]
+h1n1<-readDNAStringSet("H1N1.fna")
+
+```
+
+## 1. ¿Cuál es el tamaño de cada secuencia?
+
+### Zika
+
+```{r}
+print(length(zika))
+```
+
+### SARS coronavirus
+
+```{r}
+print(length(sars))
+```
+
+### Wuhan seafood market pneumonia virus isolate Wuhan-Hu-1
+
+```{r}
+print(length(wuhan))
+```
+
+### Middle East respiratory syndrome coronavirus
+
+```{r}
+print(length(middle_east))
+```
+
+### Dengue virus 1
+
+```{r}
+print(length(dengue))
+```
+
+### H1N1
+
+```{r}
+for(i in 1:length(h1n1)){
+  cat(c("Longitud de Secuencia #",i,": ",length(h1n1[[i]]),"\n"))
+}
+```
+
+## ¿Cúal es la composición de nucleótidos de cada secuencia?
+
+### Zika
+
+```{r}
+print(alphabetFrequency(zika, baseOnly=TRUE, as.prob=TRUE))
+```
+
+### SARS coronavirus
+
+```{r}
+print(alphabetFrequency(sars, baseOnly=TRUE, as.prob=TRUE))
+```
+
+### Wuhan seafood market pneumonia virus isolate Wuhan-Hu-1
+
+```{r}
+print(alphabetFrequency(wuhan, baseOnly=TRUE, as.prob=TRUE))
+```
+
+### Middle East respiratory syndrome coronavirus
+
+```{r}
+print(alphabetFrequency(middle_east, baseOnly=TRUE, as.prob=TRUE))
+```
+
+### Dengue virus 1
+
+```{r}
+print(alphabetFrequency(dengue, baseOnly=TRUE, as.prob=TRUE))
+```
+
+### H1N1
+
+```{r}
+for(i in 1:length(h1n1)){
+  cat(c("Composición de Nucleótidos de la Secuencia #",i,": ","\n"))
+  print(alphabetFrequency(h1n1[[i]], baseOnly=TRUE, as.prob=TRUE))
+  cat("\n")
+}
+```
+
+## ¿Cuál es el contenido de GC de cada virus?
+
+Se hace una función que cuente la presencia de G y C en cada secuencia para después regresar el porcentaje del contenido de GC de cada una.
+
+```{r}
+gcContent <- function(dnastring){
+  count<-0
+  for (i in 1:length(dnastring)){
+    if(as.character(dnastring[i])=="G" || as.character(dnastring[i])=="C"){
+      count=count+1
+    }
+  }
+  gcContent<-count/length(dnastring)
+  return(gcContent*100)
+}
+```
+
+### Zika
+
+```{r}
+cat(gcContent(zika),"%","\n")
+```
+
+### SARS coronavirus
+
+```{r}
+cat(gcContent(sars),"%","\n")
+```
+
+### Wuhan seafood market pneumonia virus isolate Wuhan-Hu-1
+
+```{r}
+cat(gcContent(wuhan),"%","\n")
+```
+
+### Middle East respiratory syndrome coronavirus
+
+```{r}
+cat(gcContent(middle_east),"%","\n")
+```
+
+### Dengue virus 1
+
+```{r}
+cat(gcContent(dengue),"%","\n")
+```
+
+### H1N1
+
+```{r}
+for(i in 1:length(h1n1)){
+  cat(c("Contenido de GC de Secuencia #",i,": ",gcContent(h1n1[[i]]),"%","\n"))
+}
+```
+
+## Crear una función para obtener la secuencia en complementaria e imprimirla por cada secuencia
+
+```{r}
+complements<-function(dnastring){
+  complementaria<-""
+  for(i in 1:length(dnastring)){
+    if(as.character(dnastring[i])=="A"){
+      complementaria<-paste(complementaria,"T",sep="")
+    } else if(as.character(dnastring[i])=="T"){
+      complementaria<-paste(complementaria,"A",sep="")
+    } else if(as.character(dnastring[i])=="C"){
+      complementaria<-paste(complementaria,"G",sep="")
+    } else if(as.character(dnastring[i])=="G"){
+      complementaria<-paste(complementaria,"C",sep="")
+    } else{
+      complementaria<-paste(complementaria,"Y",sep="")
+    }
+  }
+  return(DNAString(complementaria))
+}
+```
+
+Se hace una función en donde se reemplaza cada letra con su complemento, el último condicional sustituye por Y ya que el único nucleótido distinto a "ATCG" es "R" y su complemento es "Y".
+
+### Zika
+
+```{r}
+print(complements(zika))
+```
+
+### SARS coronavirus
+
+```{r}
+print(complements(sars))
+```
+
+### Wuhan seafood market pneumonia virus isolate Wuhan-Hu-1
+
+```{r}
+print(complements(wuhan))
+```
+
+### Middle East respiratory syndrome coronavirus
+
+```{r}
+print(complements(middle_east))
+```
+
+### Dengue virus 1
+
+```{r}
+print(complements(dengue))
+```
+
+### H1N1
+
+```{r}
+for(i in 1:length(h1n1)){
+  cat(c("Complemento de Secuencia #",i,":","\n"))
+  print(complements(h1n1[[i]]))
+}
+```
+
+## Crear una gráfica de resumen para comparar la composición de nucleótidos de las 5 secuencias.
+
+Se hace una función para hacer de la frecuencia de bases un data frame para que se pueda interpretar correctamente con ggplot y crear la representación visual.
+
+```{r}
+biodf<-function(dnastring){
+  bases<-alphabetFrequency(dnastring,baseOnly=TRUE, as.prob = TRUE)
+  df<-data.frame(
+  Base=names(bases),
+  Frecuencia=bases
+)
+  return(df)
+}
+```
+
+```{r}
+zika_df<-biodf(zika)
+sars_df<-biodf(sars)
+wuhan_df<-biodf(wuhan)
+middle_east_df<-biodf(middle_east)
+dengue_df<-biodf(dengue)
+```
+
+### Zika
+
+```{r}
+ggplot(zika_df, aes(Base, Frecuencia, fill=Base))+
+  geom_bar(stat="identity")+
+  labs(title="Frecuencia de bases en secuencia Zika",
+       x="Base", y="Frecuencia")+
+  theme_minimal()
+```
+
+### SARS coronavirus
+
+```{r}
+ggplot(sars_df, aes(Base, Frecuencia, fill=Base))+
+  geom_bar(stat="identity")+
+  labs(title="Frecuencia de bases en secuencia SARS Coronavirus",
+       x="Base", y="Frecuencia")+
+  theme_minimal()
+```
+
+### Wuhan seafood market pneumonia virus isolate Wuhan-Hu-1
+
+```{r}
+ggplot(wuhan_df, aes(Base, Frecuencia, fill=Base))+
+  geom_bar(stat="identity")+
+  labs(title="Frecuencia de bases en secuencia Wuhan seafood market pneumonia virus",
+       x="Base", y="Frecuencia")+
+  theme_minimal()
+```
+
+### Middle East respiratory syndrome coronavirus
+
+```{r}
+ggplot(middle_east_df, aes(Base, Frecuencia, fill=Base))+
+  geom_bar(stat="identity")+
+  labs(title="Frecuencia de bases en secuencia Middle East respiratory syndrome coronavirus",
+       x="Base", y="Frecuencia")+
+  theme_minimal()
+```
+
+### Dengue virus 1
+
+```{r}
+ggplot(dengue_df, aes(Base, Frecuencia, fill=Base))+
+  geom_bar(stat="identity")+
+  labs(title="Frecuencia de bases en secuencia Dengue Virus 1",
+       x="Base", y="Frecuencia")+
+  theme_minimal()
+```
+
+### H1N1
+
+```{r}
+h1n1_list <- vector("list", length = length(h1n1))
+for (i in 1:length(h1n1)){
+  print(
+    ggplot(biodf(h1n1[[i]]), aes(Base, Frecuencia, fill=Base))+
+    geom_bar(stat="identity")+
+    labs(title=paste("Frecuencia de bases en secuencia #",i),
+        x="Base", y="Frecuencia")+
+    theme_minimal()
+  )
+}
+```
